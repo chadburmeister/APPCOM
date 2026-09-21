@@ -17,7 +17,7 @@ function formatDate(d: Date) {
 export default async function DashboardPage() {
   const session = await requireSession();
 
-  const rows = await db.query.calls.findMany({
+  const allRows = await db.query.calls.findMany({
     orderBy: [desc(calls.createdAt)],
     with: {
       scorecards: {
@@ -27,13 +27,30 @@ export default async function DashboardPage() {
     },
   });
 
+  // Coaches see every call. Members see only calls they logged or scored —
+  // a direct link to any call (e.g. shared by a coach for panel scoring)
+  // still works even if it doesn't show up in this list.
+  const rows =
+    session.role === "coach"
+      ? allRows
+      : allRows.filter(
+          (call) =>
+            call.createdById === session.sub ||
+            call.scorecards.some((s) => s.scorerId === session.sub)
+        );
+
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-purple-deep">Calls</h1>
+          <h1 className="text-2xl font-bold text-purple-deep">
+            {session.role === "coach" ? "All calls" : "Your calls"}
+          </h1>
           <p className="text-sm text-gray-text">
             Welcome back, {session.name.split(" ")[0]}.
+            {session.role === "coach"
+              ? " You're seeing every call across the team."
+              : " Calls you logged or scored — anyone can still share a direct link to a call for you to score."}
           </p>
         </div>
         <Link

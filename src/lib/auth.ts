@@ -56,3 +56,12 @@ export async function requireSession(): Promise<SessionPayload> {
   }
   return session;
 }
+
+/** Use in Server Components/Actions that require a coach/admin account. */
+export async function requireCoach(): Promise<SessionPayload> {
+  const session = await requireSession();
+  if (session.role !== "coach") {
+    redirect("/");
+  }
+  return session;
+}

@@ -23,6 +23,14 @@ export function NavBar({ session }: { session: SessionPayload | null }) {
             >
               Calls
             </Link>
+            {session.role === "coach" ? (
+              <Link
+                href="/admin/users"
+                className="font-medium text-purple-deep hover:text-purple"
+              >
+                Manage users
+              </Link>
+            ) : null}
             <Link
               href="/calls/new"
               className="rounded-md bg-purple px-3 py-1.5 font-semibold text-white hover:opacity-90"

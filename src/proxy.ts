@@ -27,6 +27,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  // Coach-only area. (The pages themselves check this too — this is just an
+  // extra layer at the edge.)
+  if (pathname.startsWith("/admin") && session?.role !== "coach") {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   return NextResponse.next();
 }
 

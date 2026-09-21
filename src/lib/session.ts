@@ -9,10 +9,13 @@ import { SignJWT, jwtVerify } from "jose";
 export const SESSION_COOKIE = "appcom_session";
 export const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
+export type Role = "member" | "coach";
+
 export type SessionPayload = {
   sub: string; // user id
   email: string;
   name: string;
+  role: Role;
 };
 
 function getSecret() {
@@ -43,9 +46,15 @@ export async function verifySessionToken(
     if (
       typeof payload.sub === "string" &&
       typeof payload.email === "string" &&
-      typeof payload.name === "string"
+      typeof payload.name === "string" &&
+      (payload.role === "member" || payload.role === "coach")
     ) {
-      return { sub: payload.sub, email: payload.email, name: payload.name };
+      return {
+        sub: payload.sub,
+        email: payload.email,
+        name: payload.name,
+        role: payload.role,
+      };
     }
     return null;
   } catch {

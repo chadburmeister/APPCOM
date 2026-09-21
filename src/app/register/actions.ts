@@ -45,12 +45,20 @@ export async function registerAction(
 
   const passwordHash = await hashPassword(password);
 
+  // Self-registration always creates a regular "member" account. Coach
+  // accounts are promoted by an existing coach from the Manage Users page
+  // (or by hand in the database for the very first one).
   const [user] = await db
     .insert(users)
-    .values({ name, email, passwordHash })
+    .values({ name, email, passwordHash, role: "member" })
     .returning();
 
-  await setSessionCookie({ sub: user.id, email: user.email, name: user.name });
+  await setSessionCookie({
+    sub: user.id,
+    email: user.email,
+    name: user.name,
+    role: "member",
+  });
 
   redirect("/");
 }

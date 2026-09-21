@@ -39,7 +39,13 @@ export async function loginAction(
     return { error: "Incorrect email or password." };
   }
 
-  await setSessionCookie({ sub: user.id, email: user.email, name: user.name });
+  if (!user.active) {
+    return { error: "This account has been deactivated. Contact your coach for access." };
+  }
+
+  const role = user.role === "coach" ? "coach" : "member";
+
+  await setSessionCookie({ sub: user.id, email: user.email, name: user.name, role });
 
   const destination = next && next.startsWith("/") ? next : "/";
   redirect(destination);

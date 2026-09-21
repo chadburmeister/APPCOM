@@ -14,6 +14,12 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  // "member" = a rep; sees only their own calls/scores.
+  // "coach"  = sees every call and score, and can manage users.
+  role: text("role").notNull().default("member"),
+  // Deactivated accounts can't log in, but their calls/scorecards are kept
+  // intact rather than cascade-deleted, so history survives someone leaving.
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

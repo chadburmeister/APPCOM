@@ -86,6 +86,22 @@ Once it's live, every `git push` to `main` redeploys automatically.
 - A user can only have one scorecard per call; submitting again updates it in place.
 - The call detail page shows the panel average per APPCOM element (out of 5) and the average overall rating (out of 10), plus every individual scorecard with its notes.
 
+## Roles: members and coaches
+
+Every account is either a **member** (a rep) or a **coach**. Members see only the calls they logged or scored on the dashboard — but a direct link to any call still works for anyone signed in, so a coach can share a call with specific panelists even if it's not "theirs." Coaches see every call and can add or deactivate users from **Manage users** in the nav.
+
+Self-registration (`/register`) always creates a member account — there's no self-serve way to become a coach, by design. To make the first coach, run this once in your database's SQL editor (Supabase → SQL Editor), after that person has registered:
+
+```sql
+UPDATE users SET role = 'coach' WHERE email = 'you@example.com';
+```
+
+After that, that person can promote or add further coaches from the Manage Users page itself.
+
+Deactivating a user (rather than deleting them) blocks their login but keeps every call they logged and every scorecard they submitted intact — there's no destructive delete in the UI on purpose, since the underlying foreign keys cascade-delete a user's calls/scorecards if the row itself is ever removed.
+
+**Note:** deploying this role change invalidates existing sessions (the session cookie now carries a role claim older tokens don't have) — everyone, including you, will need to log in again once it's live.
+
 ## Project structure
 
 ```
