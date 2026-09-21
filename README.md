@@ -1,0 +1,117 @@
+# APPCOM Call Scorecard
+
+An internal tool for scoring sales calls against the APPCOM framework — **A**cceptance, **P**urpose, **P**robing, **C**onsulting, **O**vercome Objections, **M**otivate to Act. Log a call, score it yourself, and let a panel of reviewers score the same call independently — the app shows each panelist's scores plus the averaged view.
+
+Built with Next.js (App Router), Tailwind CSS, Drizzle ORM, and Postgres. No external auth provider required — accounts and sessions are handled by the app itself.
+
+## What's included
+
+- Email + password login and registration (optionally restricted to your company's email domain)
+- Log a call: rep name, account/prospect, call date, recording link, context notes
+- Score a call against all six APPCOM elements (1–5 each) plus an overall 1–10 rating, with the sub-questions from the original APPCOM score card (top qualifying questions, "cost of doing nothing," buying process, etc.)
+- Panel scoring: any signed-in user can add their own scorecard to a call; the call page shows every panelist's scores side by side and the averaged score per APPCOM element
+
+## No-terminal setup (browser only)
+
+Everything below can also be done without opening a terminal:
+
+1. **GitHub** — create a new empty repository at [github.com/new](https://github.com/new) (don't add a README/license, so it starts empty). On the empty repo's page, click **"uploading an existing file"**, then drag in everything *inside* this unzipped folder (not the folder itself) — 44 files, well under GitHub's upload limit — and click **Commit changes**.
+2. **Database** — create a free project at [neon.tech](https://neon.tech) and copy its pooled connection string.
+3. **Tables** — in Neon's dashboard, open the **SQL Editor** and paste in the contents of `drizzle/0000_legal_major_mapleleaf.sql` from this repo, then run it. That creates the `users`, `calls`, and `scorecards` tables — no `db:push` needed.
+4. **Deploy** — at [vercel.com/new](https://vercel.com/new), import the GitHub repo from step 1. In Settings → Environment Variables, add `DATABASE_URL` (your Neon connection string) and `AUTH_SECRET` (any long random string — ask Claude to generate one if needed). Deploy.
+5. Open the deployed URL, register an account, and log your first call.
+
+## 1. Local setup
+
+```bash
+npm install
+cp .env.example .env.local
+```
+
+Fill in `.env.local`:
+
+- `DATABASE_URL` — see step 2 below.
+- `AUTH_SECRET` — generate one with `openssl rand -base64 32`.
+- `ALLOWED_EMAIL_DOMAIN` — optional. Set to `zocks.io` to restrict registration to your company domain, or leave blank to allow anyone to register (fine for a first test drive; tighten before sharing the link widely).
+
+## 2. Create the database (Neon / Vercel Postgres)
+
+Vercel's built-in Postgres is Neon under the hood, so either path below works — pick whichever is more convenient.
+
+**Option A — from the Vercel dashboard (recommended, does both steps 2 and 4 together later):**
+Skip this for now; you'll create the database from your Vercel project in step 4, then copy the connection string back into `.env.local` for local dev.
+
+**Option B — directly on Neon:**
+1. Create a free project at [neon.tech](https://neon.tech).
+2. Copy the **pooled** connection string (starts with `postgresql://`, includes `sslmode=require`).
+3. Paste it into `DATABASE_URL` in `.env.local`.
+
+Once `DATABASE_URL` is set, push the schema (creates the `users`, `calls`, and `scorecards` tables):
+
+```bash
+npm run db:push
+```
+
+Run this again any time `src/db/schema.ts` changes.
+
+## 3. Run it locally
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000`, register an account, and log your first call.
+
+## 4. Push to GitHub
+
+```bash
+git remote add origin https://github.com/<your-username>/appcom-scorecard.git
+git branch -M main
+git push -u origin main
+```
+
+(This repo already has an initial commit from setup — you're just adding the remote and pushing.)
+
+## 5. Deploy to Vercel
+
+1. Go to [vercel.com/new](https://vercel.com/new) and import the GitHub repo you just pushed.
+2. If you didn't already create a database in step 2, add one now from the **Storage** tab of the new project (Neon Postgres) — this automatically sets `DATABASE_URL` for you.
+3. In **Settings → Environment Variables**, add:
+   - `AUTH_SECRET` — the same value from your `.env.local`, or generate a fresh one with `openssl rand -base64 32`.
+   - `ALLOWED_EMAIL_DOMAIN` — optional, e.g. `zocks.io`.
+   - `DATABASE_URL` — already set if you used Vercel's Storage tab; otherwise paste your Neon connection string.
+4. Deploy. **Set the environment variables before the first deploy** — the app reads `DATABASE_URL`/`AUTH_SECRET` at startup and the build will fail without them.
+5. After the first deploy, push the schema to the production database once: run `npm run db:push` locally pointed at the production `DATABASE_URL`, or paste `drizzle/0000_legal_major_mapleleaf.sql` into Neon's SQL Editor and run it.
+
+Once it's live, every `git push` to `main` redeploys automatically.
+
+## How scoring works
+
+- Anyone with an account can log a call and anyone can add their own scorecard to any call — that's the "panel" model: each reviewer scores independently, and nothing is shared or averaged until they submit.
+- A user can only have one scorecard per call; submitting again updates it in place.
+- The call detail page shows the panel average per APPCOM element (out of 5) and the average overall rating (out of 10), plus every individual scorecard with its notes.
+
+## Project structure
+
+```
+src/
+  app/
+    login/, register/        auth pages + server actions
+    calls/new/                log-a-call form
+    calls/[id]/                call detail + panel scores
+    calls/[id]/score/          APPCOM scoring form
+    actions/logout.ts
+  components/                shared UI (nav, rating input, submit button)
+  db/                         Drizzle schema + client
+  lib/
+    auth.ts                  password hashing, session cookies (Node runtime)
+    session.ts               JWT sign/verify only (Edge-safe, used by proxy.ts)
+    appcom.ts                 APPCOM element definitions + scoring helpers
+  proxy.ts                    route protection (Next.js "proxy"/middleware)
+```
+
+## Customizing
+
+- **Scoring scale** — element scores are 1–5 and the overall rating is 1–10; adjust `SCORE_MIN`/`SCORE_MAX` in `src/lib/appcom.ts` and the `overallRating` validation in `src/app/calls/[id]/score/actions.ts` if you want a different scale.
+- **Who can register** — set `ALLOWED_EMAIL_DOMAIN`. For tighter control (invite-only), remove the public `/register` page and create accounts by inserting rows directly, or ask and this can be added.
+- **Branding** — colors and fonts live in `src/app/globals.css` (Zocks purple/green palette, Plus Jakarta Sans + JetBrains Mono already wired up).
