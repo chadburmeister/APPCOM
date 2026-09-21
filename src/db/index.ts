@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
@@ -10,6 +10,9 @@ if (!connectionString) {
   );
 }
 
-const sql = neon(connectionString);
+// Standard Postgres wire-protocol driver — works with any Postgres provider
+// (Supabase, Neon, Vercel Postgres, Railway, a self-hosted instance, etc.),
+// not just one specific vendor's proprietary connector.
+const client = postgres(connectionString, { prepare: false, max: 1 });
 
-export const db = drizzle(sql, { schema });
+export const db = drizzle(client, { schema });

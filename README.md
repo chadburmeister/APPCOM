@@ -2,7 +2,7 @@
 
 An internal tool for scoring sales calls against the APPCOM framework — **A**cceptance, **P**urpose, **P**robing, **C**onsulting, **O**vercome Objections, **M**otivate to Act. Log a call, score it yourself, and let a panel of reviewers score the same call independently — the app shows each panelist's scores plus the averaged view.
 
-Built with Next.js (App Router), Tailwind CSS, Drizzle ORM, and Postgres. No external auth provider required — accounts and sessions are handled by the app itself.
+Built with Next.js (App Router), Tailwind CSS, Drizzle ORM, and Postgres. No external auth provider required — accounts and sessions are handled by the app itself. The database layer uses a standard Postgres driver, so it works with any provider's connection string — these instructions use Supabase, but Neon, Vercel Postgres, Railway, etc. all work too.
 
 ## What's included
 
@@ -16,9 +16,9 @@ Built with Next.js (App Router), Tailwind CSS, Drizzle ORM, and Postgres. No ext
 Everything below can also be done without opening a terminal:
 
 1. **GitHub** — create a new empty repository at [github.com/new](https://github.com/new) (don't add a README/license, so it starts empty). On the empty repo's page, click **"uploading an existing file"**, then drag in everything *inside* this unzipped folder (not the folder itself) — 44 files, well under GitHub's upload limit — and click **Commit changes**.
-2. **Database** — create a free project at [neon.tech](https://neon.tech) and copy its pooled connection string.
-3. **Tables** — in Neon's dashboard, open the **SQL Editor** and paste in the contents of `drizzle/0000_legal_major_mapleleaf.sql` from this repo, then run it. That creates the `users`, `calls`, and `scorecards` tables — no `db:push` needed.
-4. **Deploy** — at [vercel.com/new](https://vercel.com/new), import the GitHub repo from step 1. In Settings → Environment Variables, add `DATABASE_URL` (your Neon connection string) and `AUTH_SECRET` (any long random string — ask Claude to generate one if needed). Deploy.
+2. **Database** — create a free project at [supabase.com](https://supabase.com). In Project Settings → Database, copy the **Transaction pooler** connection string (port 6543) — this is the one to use for `DATABASE_URL` since serverless functions need pooled connections. Replace the `[YOUR-PASSWORD]` placeholder in it with your database password (set when you created the project).
+3. **Tables** — in Supabase's dashboard, open the **SQL Editor**, paste in the contents of `drizzle/0000_legal_major_mapleleaf.sql` from this repo, then run it. That creates the `users`, `calls`, and `scorecards` tables — no `db:push` needed.
+4. **Deploy** — at [vercel.com/new](https://vercel.com/new), import the GitHub repo from step 1. In Settings → Environment Variables, add `DATABASE_URL` (your Supabase connection string) and `AUTH_SECRET` (any long random string — ask Claude to generate one if needed). Deploy.
 5. Open the deployed URL, register an account, and log your first call.
 
 ## 1. Local setup
@@ -34,16 +34,12 @@ Fill in `.env.local`:
 - `AUTH_SECRET` — generate one with `openssl rand -base64 32`.
 - `ALLOWED_EMAIL_DOMAIN` — optional. Set to `zocks.io` to restrict registration to your company domain, or leave blank to allow anyone to register (fine for a first test drive; tighten before sharing the link widely).
 
-## 2. Create the database (Neon / Vercel Postgres)
+## 2. Create the database (Supabase)
 
-Vercel's built-in Postgres is Neon under the hood, so either path below works — pick whichever is more convenient.
+Any Postgres provider works (see the note at the top), but these steps use Supabase:
 
-**Option A — from the Vercel dashboard (recommended, does both steps 2 and 4 together later):**
-Skip this for now; you'll create the database from your Vercel project in step 4, then copy the connection string back into `.env.local` for local dev.
-
-**Option B — directly on Neon:**
-1. Create a free project at [neon.tech](https://neon.tech).
-2. Copy the **pooled** connection string (starts with `postgresql://`, includes `sslmode=require`).
+1. Create a free project at [supabase.com](https://supabase.com) and set a database password when prompted (save it).
+2. In Project Settings → Database, copy the **Transaction pooler** connection string (port `6543`) — pooled connections are what serverless functions need. Swap in your real password where it says `[YOUR-PASSWORD]`.
 3. Paste it into `DATABASE_URL` in `.env.local`.
 
 Once `DATABASE_URL` is set, push the schema (creates the `users`, `calls`, and `scorecards` tables):
@@ -75,13 +71,12 @@ git push -u origin main
 ## 5. Deploy to Vercel
 
 1. Go to [vercel.com/new](https://vercel.com/new) and import the GitHub repo you just pushed.
-2. If you didn't already create a database in step 2, add one now from the **Storage** tab of the new project (Neon Postgres) — this automatically sets `DATABASE_URL` for you.
-3. In **Settings → Environment Variables**, add:
+2. In **Settings → Environment Variables**, add:
+   - `DATABASE_URL` — your Supabase transaction-pooler connection string from step 2.
    - `AUTH_SECRET` — the same value from your `.env.local`, or generate a fresh one with `openssl rand -base64 32`.
    - `ALLOWED_EMAIL_DOMAIN` — optional, e.g. `zocks.io`.
-   - `DATABASE_URL` — already set if you used Vercel's Storage tab; otherwise paste your Neon connection string.
-4. Deploy. **Set the environment variables before the first deploy** — the app reads `DATABASE_URL`/`AUTH_SECRET` at startup and the build will fail without them.
-5. After the first deploy, push the schema to the production database once: run `npm run db:push` locally pointed at the production `DATABASE_URL`, or paste `drizzle/0000_legal_major_mapleleaf.sql` into Neon's SQL Editor and run it.
+3. Deploy. **Set the environment variables before the first deploy** — the app reads `DATABASE_URL`/`AUTH_SECRET` at startup and the build will fail without them.
+4. After the first deploy, push the schema to the production database once: run `npm run db:push` locally pointed at the production `DATABASE_URL`, or paste `drizzle/0000_legal_major_mapleleaf.sql` into Supabase's SQL Editor and run it (you've likely already done this in step 3 above if you're following the same database for local and production).
 
 Once it's live, every `git push` to `main` redeploys automatically.
 
