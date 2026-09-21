@@ -9,8 +9,13 @@ import { requireSession } from "@/lib/auth";
 import { SCORE_MIN, SCORE_MAX } from "@/lib/appcom";
 
 const scoreField = z.coerce.number().int().min(SCORE_MIN).max(SCORE_MAX);
+// Unchecked HTML checkboxes are omitted from FormData entirely (the key is
+// absent, not just undefined-valued), so this field must be .optional() —
+// without it, Zod treats the missing key as a validation failure rather than
+// passing undefined through to the transform.
 const checkbox = z
-  .union([z.literal("on"), z.literal(""), z.undefined()])
+  .string()
+  .optional()
   .transform((v) => v === "on");
 
 const scorecardSchema = z.object({
